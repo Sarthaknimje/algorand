@@ -312,33 +312,31 @@ export const getMyTokens = async (walletAddress) => {
   }
 };
 
-export const buyTokens = async (buyer, assetId, amount) => {
+export const buyTokens = async (assetId, amount, buyer) => {
   try {
-    if (!marketContractId) {
-      await initializeContracts();
-    }
+    const token = await getToken(assetId);
+    if (!token) throw new Error('Token not found');
 
     const params = await algodClient.getTransactionParams().do();
     
-    // Create payment transaction
+    // Get current price from contract state
+    const appInfo = await algodClient.getApplicationByID(token.marketAppId).do();
+    const currentPrice = appInfo.params['global-state'].find(
+      state => state.key === Buffer.from('price').toString('base64')
+    )?.value.uint || 1; // Default to 1 ALGO if not set
+
+    // Calculate total cost with fees
+    const platformFee = amount * currentPrice * 0.05; // 5% platform fee
+    const creatorRoyalty = amount * currentPrice * 0.05; // 5% creator royalty
+    const totalCost = (amount * currentPrice) + platformFee + creatorRoyalty;
+
+    // Create payment transaction for the purchase
     const paymentTxn = algosdk.makePaymentTxnWithSuggestedParams(
       buyer.addr,
-      algosdk.getApplicationAddress(marketContractId),
-      amount * 1000000, // Convert to microAlgos
+      algosdk.getApplicationAddress(token.marketAppId),
+      totalCost,
       undefined,
       undefined,
-      params
-    );
-
-    // Create asset transfer transaction
-    const assetTransferTxn = algosdk.makeAssetTransferTxnWithSuggestedParams(
-      algosdk.getApplicationAddress(marketContractId),
-      buyer.addr,
-      undefined,
-      undefined,
-      amount,
-      undefined,
-      assetId,
       params
     );
 
@@ -346,79 +344,73 @@ export const buyTokens = async (buyer, assetId, amount) => {
     const appCallTxn = algosdk.makeApplicationCallTxnWithSuggestedParams(
       buyer.addr,
       params,
-      marketContractId,
+      token.marketAppId,
+      [new Uint8Array(Buffer.from('buy'))],
+      [algosdk.encodeUint64(amount)],
       undefined,
       undefined,
       undefined,
       undefined,
       undefined,
       undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      [paymentTxn, assetTransferTxn]
+      undefined
     );
 
     // Group transactions
-    const txnGroup = [paymentTxn, assetTransferTxn, appCallTxn];
+    const txnGroup = [paymentTxn, appCallTxn];
     algosdk.assignGroupID(txnGroup);
 
-    // Sign transactions
-    const signedTxns = txnGroup.map(txn => txn.signTxn(buyer.sk));
-
-    // Submit transactions
-    const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
-    await algosdk.waitForConfirmation(algodClient, txId, 3);
+    // Sign and send transactions
+    const signedTxn = txnGroup.map(txn => txn.signTxn(buyer.sk));
+    const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
+    await algodClient.waitForConfirmation(txId, 5);
 
     // Save trade to MongoDB
     await saveTrade({
       type: 'buy',
       assetId,
       amount,
-      price: 1, // 1 ALGO per token
+      price: currentPrice,
+      totalCost,
       buyer: buyer.addr,
-      timestamp: new Date()
+      timestamp: new Date(),
+      txId
     });
 
-    return txId;
+    return { txId, price: currentPrice, totalCost };
   } catch (error) {
     console.error('Error buying tokens:', error);
     throw error;
   }
 };
 
-export const sellTokens = async (seller, assetId, amount) => {
+export const sellTokens = async (assetId, amount, seller) => {
   try {
-    if (!marketContractId) {
-      await initializeContracts();
-    }
+    const token = await getToken(assetId);
+    if (!token) throw new Error('Token not found');
 
     const params = await algodClient.getTransactionParams().do();
     
+    // Get current price from contract state
+    const appInfo = await algodClient.getApplicationByID(token.marketAppId).do();
+    const currentPrice = appInfo.params['global-state'].find(
+      state => state.key === Buffer.from('price').toString('base64')
+    )?.value.uint || 1; // Default to 1 ALGO if not set
+
+    // Calculate total value with fees
+    const platformFee = amount * currentPrice * 0.05; // 5% platform fee
+    const creatorRoyalty = amount * currentPrice * 0.05; // 5% creator royalty
+    const totalValue = (amount * currentPrice) - platformFee - creatorRoyalty;
+
     // Create asset transfer transaction
     const assetTransferTxn = algosdk.makeAssetTransferTxnWithSuggestedParams(
       seller.addr,
-      algosdk.getApplicationAddress(marketContractId),
+      algosdk.getApplicationAddress(token.marketAppId),
       undefined,
       undefined,
       amount,
       undefined,
       assetId,
-      params
-    );
-
-    // Create payment transaction
-    const paymentTxn = algosdk.makePaymentTxnWithSuggestedParams(
-      algosdk.getApplicationAddress(marketContractId),
-      seller.addr,
-      amount * 1000000, // Convert to microAlgos
-      undefined,
-      undefined,
       params
     );
 
@@ -426,46 +418,40 @@ export const sellTokens = async (seller, assetId, amount) => {
     const appCallTxn = algosdk.makeApplicationCallTxnWithSuggestedParams(
       seller.addr,
       params,
-      marketContractId,
+      token.marketAppId,
+      [new Uint8Array(Buffer.from('sell'))],
+      [algosdk.encodeUint64(amount)],
       undefined,
       undefined,
       undefined,
       undefined,
       undefined,
       undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      [assetTransferTxn, paymentTxn]
+      undefined
     );
 
     // Group transactions
-    const txnGroup = [assetTransferTxn, paymentTxn, appCallTxn];
+    const txnGroup = [assetTransferTxn, appCallTxn];
     algosdk.assignGroupID(txnGroup);
 
-    // Sign transactions
-    const signedTxns = txnGroup.map(txn => txn.signTxn(seller.sk));
-
-    // Submit transactions
-    const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
-    await algosdk.waitForConfirmation(algodClient, txId, 3);
+    // Sign and send transactions
+    const signedTxn = txnGroup.map(txn => txn.signTxn(seller.sk));
+    const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
+    await algodClient.waitForConfirmation(txId, 5);
 
     // Save trade to MongoDB
     await saveTrade({
       type: 'sell',
       assetId,
       amount,
-      price: 1, // 1 ALGO per token
+      price: currentPrice,
+      totalValue,
       seller: seller.addr,
-      timestamp: new Date()
+      timestamp: new Date(),
+      txId
     });
 
-    return txId;
+    return { txId, price: currentPrice, totalValue };
   } catch (error) {
     console.error('Error selling tokens:', error);
     throw error;
