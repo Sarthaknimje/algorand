@@ -1,0 +1,122 @@
+#pragma version 6
+txn ApplicationID
+int 0
+==
+bnz main_l14
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l13
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l12
+txn OnCompletion
+int CloseOut
+==
+bnz main_l11
+txn OnCompletion
+int OptIn
+==
+bnz main_l10
+txna ApplicationArgs 0
+byte "buy"
+==
+bnz main_l9
+txna ApplicationArgs 0
+byte "sell"
+==
+bnz main_l8
+err
+main_l8:
+txna ApplicationArgs 1
+btoi
+byte "token_balance"
+app_global_get
+<=
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+txn Sender
+itxn_field AssetReceiver
+txna ApplicationArgs 1
+btoi
+itxn_field AssetAmount
+byte "asset_id"
+app_global_get
+itxn_field XferAsset
+itxn_submit
+byte "token_balance"
+byte "token_balance"
+app_global_get
+int 0
+txna ApplicationArgs 1
+btoi
+-
++
+app_global_put
+byte "algo_balance"
+byte "algo_balance"
+app_global_get
+int 0
+txna ApplicationArgs 1
+btoi
+int 1000000
+*
+-
++
+app_global_put
+int 1
+return
+main_l9:
+txn TypeEnum
+int pay
+==
+assert
+txn Amount
+txna ApplicationArgs 1
+btoi
+int 1000000
+*
+==
+assert
+txn Receiver
+global CurrentApplicationAddress
+==
+assert
+txna ApplicationArgs 1
+btoi
+int 100000
+>=
+assert
+byte "token_balance"
+byte "token_balance"
+app_global_get
+txna ApplicationArgs 1
+btoi
++
+app_global_put
+byte "algo_balance"
+byte "algo_balance"
+app_global_get
+txn Amount
++
+app_global_put
+int 1
+return
+main_l10:
+int 1
+return
+main_l11:
+int 1
+return
+main_l12:
+int 1
+return
+main_l13:
+int 1
+return
+main_l14:
+int 1
+return
