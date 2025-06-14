@@ -12,15 +12,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 const TokenLaunch = () => {
+  const { isAuthenticated, youtubeChannel, handleGoogleLogin } = useGoogleAuth();
   const { isConnectedToPeraWallet, address, peraWallet } = useWallet();
-  const { 
-    isGoogleAuthenticated, 
-    youtubeChannel, 
-    loading: googleLoading, 
-    error: googleError,
-    handleGoogleLogin,
-    handleLogout 
-  } = useGoogleAuth();
 
   const [formData, setFormData] = useState({
     tokenName: '',
@@ -52,12 +45,8 @@ const TokenLaunch = () => {
       setError('Please connect your Pera Wallet first');
       return;
     }
-    if (!isGoogleAuthenticated || !youtubeChannel) {
+    if (!isAuthenticated || !youtubeChannel) {
       setError('Please connect your YouTube channel first');
-      return;
-    }
-    if (formData.channelId !== youtubeChannel.id) {
-      setError('You can only mint tokens for your own YouTube channel');
       return;
     }
 
@@ -84,11 +73,11 @@ const TokenLaunch = () => {
         tokenName: formData.tokenName,
         tokenSymbol: formData.tokenSymbol,
         totalSupply: parseInt(formData.totalSupply),
-        url: formData.channelUrl,
+        url: `https://www.youtube.com/channel/${youtubeChannel.id}`,
         metadataHash: {
           description: formData.description,
-          channelId: formData.channelId,
-          channelName: formData.channelName,
+          channelId: youtubeChannel.id,
+          channelName: youtubeChannel.title,
           initialPrice: formData.initialPrice
         }
       });
@@ -113,17 +102,6 @@ const TokenLaunch = () => {
       setError(err.message || 'Failed to launch token');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleChannelSelect = () => {
-    if (youtubeChannel) {
-      setFormData(prev => ({
-        ...prev,
-        channelId: youtubeChannel.id,
-        channelName: youtubeChannel.title,
-        channelUrl: `https://youtube.com/channel/${youtubeChannel.id}`
-      }));
     }
   };
 
@@ -156,7 +134,7 @@ const TokenLaunch = () => {
           </motion.div>
         )}
 
-        {!isGoogleAuthenticated && (
+        {!isAuthenticated && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -258,52 +236,34 @@ const TokenLaunch = () => {
                 <label className="block text-sm font-medium text-gray-400">
                   YouTube Channel
                 </label>
-                {!isGoogleAuthenticated ? (
+                {!isAuthenticated ? (
                   <button
                     type="button"
                     onClick={handleGoogleLogin}
-                    disabled={googleLoading}
                     className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                   >
-                    {googleLoading ? (
-                      <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm6.605 16.51c-.35.35-.92.35-1.27 0l-4.335-4.335c-.35-.35-.35-.92 0-1.27.35-.35.92-.35 1.27 0l4.335 4.335c.35.35.35.92 0 1.27zm-6.605-6.605c-.35-.35-.35-.92 0-1.27.35-.35.92-.35 1.27 0l4.335 4.335c.35.35.35.92 0 1.27-.35.35-.92.35-1.27 0l-4.335-4.335z"/>
-                        </svg>
-                        Connect YouTube
-                      </>
-                    )}
+                    Connect YouTube
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="text-sm text-gray-400 hover:text-white"
-                  >
-                    Disconnect
-                  </button>
-                )}
-              </div>
-
-              {youtubeChannel && (
-                <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={youtubeChannel.thumbnailUrl}
-                      alt={youtubeChannel.title}
-                      className="w-12 h-12 rounded-full"
-                    />
-                    <div>
-                      <h3 className="font-medium text-white">{youtubeChannel.title}</h3>
-                      <p className="text-sm text-gray-400">
-                        {youtubeChannel.subscriberCount} subscribers • {youtubeChannel.videoCount} videos
-                      </p>
+                ) : youtubeChannel ? (
+                  <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={youtubeChannel.thumbnailUrl}
+                        alt={youtubeChannel.title}
+                        className="w-12 h-12 rounded-full"
+                      />
+                      <div>
+                        <h3 className="font-medium text-white">{youtubeChannel.title}</h3>
+                        <p className="text-sm text-gray-400">
+                          {youtubeChannel.subscriberCount} subscribers • {youtubeChannel.videoCount} videos
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-yellow-500">Loading channel information...</p>
+                )}
+              </div>
             </div>
 
             {error && (
@@ -327,9 +287,9 @@ const TokenLaunch = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              disabled={loading || !isConnectedToPeraWallet || !isGoogleAuthenticated}
+              disabled={loading || !isConnectedToPeraWallet || !isAuthenticated || !youtubeChannel}
               className={`w-full py-3 px-6 rounded-lg text-white font-medium transition-colors ${
-                loading || !isConnectedToPeraWallet || !isGoogleAuthenticated
+                loading || !isConnectedToPeraWallet || !isAuthenticated || !youtubeChannel
                   ? 'bg-gray-600 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
               }`}
