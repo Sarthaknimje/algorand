@@ -58,6 +58,12 @@ const Navbar = () => {
                 </button>
               </>
             )}
+            <Link
+              to="/trade"
+              className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+            >
+              Trade Tokens
+            </Link>
             <ConnectWallet />
           </div>
 
@@ -123,6 +129,12 @@ const Navbar = () => {
               </button>
             </>
           )}
+          <Link
+            to="/trade"
+            className="block w-full text-left px-3 py-2 text-gray-300 hover:text-white transition-colors"
+          >
+            Trade Tokens
+          </Link>
           <div className="px-3 py-2">
             <ConnectWallet />
           </div>

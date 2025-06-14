@@ -1,0 +1,197 @@
+#pragma version 6
+txn ApplicationID
+int 0
+==
+bnz main_l22
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l21
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l20
+txn OnCompletion
+int CloseOut
+==
+bnz main_l19
+txn OnCompletion
+int OptIn
+==
+bnz main_l18
+txna ApplicationArgs 0
+byte "transfer"
+==
+bnz main_l17
+txna ApplicationArgs 0
+byte "initiate_recovery"
+==
+bnz main_l16
+txna ApplicationArgs 0
+byte "approve_recovery"
+==
+bnz main_l15
+txna ApplicationArgs 0
+byte "complete_recovery"
+==
+bnz main_l14
+txna ApplicationArgs 0
+byte "lock"
+==
+bnz main_l13
+txna ApplicationArgs 0
+byte "unlock"
+==
+bnz main_l12
+err
+main_l12:
+txn Sender
+byte "token_owner"
+app_global_get
+==
+assert
+byte "is_locked"
+int 0
+app_global_put
+int 1
+return
+main_l13:
+txn Sender
+byte "token_owner"
+app_global_get
+==
+assert
+byte "is_locked"
+int 1
+app_global_put
+int 1
+return
+main_l14:
+byte "is_locked"
+app_global_get
+int 1
+==
+assert
+byte "recovery_approvals"
+app_global_get
+byte "recovery_threshold"
+app_global_get
+>=
+assert
+txn Sender
+byte "recovery_address"
+app_global_get
+==
+assert
+byte "token_owner"
+txna ApplicationArgs 2
+app_global_put
+byte "is_locked"
+int 0
+app_global_put
+byte "recovery_approvals"
+int 0
+app_global_put
+int 1
+return
+main_l15:
+byte "is_locked"
+app_global_get
+int 1
+==
+assert
+byte "recovery_approvals"
+app_global_get
+byte "recovery_threshold"
+app_global_get
+<
+assert
+byte "recovery_approvals"
+byte "recovery_approvals"
+app_global_get
+int 1
++
+app_global_put
+int 1
+return
+main_l16:
+txn Sender
+byte "recovery_address"
+app_global_get
+==
+assert
+byte "is_locked"
+app_global_get
+int 0
+==
+assert
+byte "is_locked"
+int 1
+app_global_put
+byte "recovery_approvals"
+int 0
+app_global_put
+int 1
+return
+main_l17:
+byte "is_locked"
+app_global_get
+int 0
+==
+assert
+txn Sender
+byte "token_owner"
+app_global_get
+==
+assert
+txna ApplicationArgs 2
+btoi
+int 0
+>
+assert
+byte "token_balance"
+byte "token_balance"
+app_global_get
+txna ApplicationArgs 2
+btoi
+-
+app_global_put
+int 1
+return
+main_l18:
+int 1
+return
+main_l19:
+int 1
+return
+main_l20:
+int 0
+return
+main_l21:
+int 0
+return
+main_l22:
+txna ApplicationArgs 1
+byte ""
+!=
+assert
+byte "token_owner"
+txna ApplicationArgs 1
+app_global_put
+byte "recovery_address"
+txna ApplicationArgs 2
+app_global_put
+byte "token_balance"
+int 0
+app_global_put
+byte "is_locked"
+int 0
+app_global_put
+byte "recovery_threshold"
+int 3
+app_global_put
+byte "recovery_approvals"
+int 0
+app_global_put
+int 1
+return

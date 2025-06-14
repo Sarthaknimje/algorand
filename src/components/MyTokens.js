@@ -1,187 +1,200 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useWallet } from '../context/WalletContext';
+import { Link } from 'react-router-dom';
 import { 
-  ArrowPathIcon,
+  UserCircleIcon,
   ChartBarIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   CurrencyDollarIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  VideoCameraIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
+import { fetchAllIndianCreators, calculateTokenMetrics } from '../services/youtube';
 
 const MyTokens = () => {
-  const { isConnectedToPeraWallet, address } = useWallet();
   const [tokens, setTokens] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
-    if (isConnectedToPeraWallet) {
-      fetchTokens();
-    }
-  }, [isConnectedToPeraWallet]);
+    const loadTokens = async () => {
+      setIsLoading(true);
+      try {
+        const creators = await fetchAllIndianCreators();
+        const formattedTokens = creators.map(creator => {
+          const metrics = calculateTokenMetrics(creator);
+          return {
+            ...creator,
+            ...metrics,
+            name: `${creator.symbol} [${creator.displayName}]`,
+            // Ensure all numeric values have defaults
+            subscribers: creator.subscribers || 0,
+            videos: creator.videos || 0,
+            views: creator.views || 0,
+            price: metrics.price || '0.00',
+            marketCap: metrics.marketCap || '0',
+            liquidity: metrics.liquidity || '0',
+            volume24h: metrics.volume24h || '0',
+            change24h: metrics.change24h || '0.0',
+          };
+        });
+        setTokens(formattedTokens);
+      } catch (error) {
+        console.error('Error loading tokens:', error);
+        setTokens([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const fetchTokens = async () => {
-    setIsLoading(true);
-    try {
-      // TODO: Implement actual token fetching from Algorand blockchain
-      // This is a placeholder for the actual implementation
-      const mockTokens = [
-        {
-          id: 1,
-          name: "CreatorCoin",
-          symbol: "CRTR",
-          totalSupply: "1,000,000",
-          currentPrice: "0.15 ALGO",
-          marketCap: "150,000 ALGO",
-          holders: "250",
-          channelName: "My YouTube Channel",
-          channelSubscribers: "10K",
-          thumbnail: "https://i.pravatar.cc/150?img=1"
-        },
-        {
-          id: 2,
-          name: "GamingToken",
-          symbol: "GAME",
-          totalSupply: "2,000,000",
-          currentPrice: "0.08 ALGO",
-          marketCap: "160,000 ALGO",
-          holders: "500",
-          channelName: "Gaming Channel",
-          channelSubscribers: "25K",
-          thumbnail: "https://i.pravatar.cc/150?img=2"
-        }
-      ];
-      setTokens(mockTokens);
-    } catch (error) {
-      console.error('Error fetching tokens:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    loadTokens();
+  }, []);
+
+  const filteredTokens = activeTab === 'all' 
+    ? tokens 
+    : tokens.filter(token => token.category.toLowerCase() === activeTab.toLowerCase());
+
+  const formatNumber = (value) => {
+    if (value === undefined || value === null) return '0';
+    return typeof value === 'number' ? value.toLocaleString() : value;
   };
 
-  if (!isConnectedToPeraWallet) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-dark via-dark-lighter to-dark py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Connect Your Wallet First</h2>
-          <p className="text-gray-300 mb-8">Please connect your Pera Wallet to view your tokens.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-dark via-dark-lighter to-dark py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold text-white">My Tokens</h2>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={fetchTokens}
-            disabled={isLoading}
-            className="px-4 py-2 rounded-lg bg-white/5 text-white font-medium transition-all duration-300 hover:bg-white/10 disabled:opacity-50"
-          >
-            {isLoading ? (
-              <div className="flex items-center">
-                <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
-                Refreshing...
-              </div>
-            ) : (
-              "Refresh"
-            )}
-          </motion.button>
-        </div>
-
-        {isLoading ? (
-          <div className="text-center py-12">
-            <ArrowPathIcon className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
-            <p className="text-gray-300">Loading your tokens...</p>
-          </div>
-        ) : tokens.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-xl font-semibold text-white mb-4">No Tokens Found</h3>
-            <p className="text-gray-300 mb-8">You haven't created any tokens yet.</p>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => window.location.href = '#launch-token'}
-              className="px-6 py-3 rounded-lg bg-gradient-to-r from-primary via-secondary to-accent text-white font-medium transition-all duration-300"
-            >
-              Launch Your First Token
-            </motion.button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tokens.map((token) => (
-              <motion.div
-                key={token.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-primary/50 transition-all duration-300"
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">My Creator Tokens</h1>
+              <p className="text-gray-400">Manage and trade your creator tokens</p>
+            </div>
+            <div className="flex space-x-4">
+              <button className="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
+                <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
+                Portfolio Overview
+              </button>
+              <Link
+                to="/trade"
+                className="px-4 py-2 bg-pink-600 rounded-lg hover:bg-pink-700 transition-colors"
               >
-                <div className="flex items-center space-x-4 mb-6">
-                  <img
-                    src={token.thumbnail}
-                    alt={token.channelName}
-                    className="w-16 h-16 rounded-full border-2 border-primary"
-                  />
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">{token.name}</h3>
-                    <p className="text-gray-300">{token.channelName}</p>
-                  </div>
-                </div>
+                <CurrencyDollarIcon className="w-5 h-5 inline-block mr-2" />
+                Trade Tokens
+              </Link>
+            </div>
+          </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CurrencyDollarIcon className="w-5 h-5 text-primary" />
-                      <span className="text-sm text-gray-300">Price</span>
-                    </div>
-                    <p className="text-lg font-semibold text-white">{token.currentPrice}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <ChartBarIcon className="w-5 h-5 text-primary" />
-                      <span className="text-sm text-gray-300">Market Cap</span>
-                    </div>
-                    <p className="text-lg font-semibold text-white">{token.marketCap}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <UserGroupIcon className="w-5 h-5 text-primary" />
-                      <span className="text-sm text-gray-300">Holders</span>
-                    </div>
-                    <p className="text-lg font-semibold text-white">{token.holders}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CurrencyDollarIcon className="w-5 h-5 text-primary" />
-                      <span className="text-sm text-gray-300">Supply</span>
-                    </div>
-                    <p className="text-lg font-semibold text-white">{token.totalSupply}</p>
-                  </div>
-                </div>
-
-                <div className="flex space-x-4">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex-1 px-4 py-2 rounded-lg bg-white/5 text-white font-medium transition-all duration-300 hover:bg-white/10"
-                  >
-                    View Details
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-primary via-secondary to-accent text-white font-medium transition-all duration-300"
-                  >
-                    Trade
-                  </motion.button>
-                </div>
-              </motion.div>
+          {/* Category Tabs */}
+          <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                activeTab === 'all' ? 'bg-pink-600' : 'bg-gray-800 hover:bg-gray-700'
+              }`}
+            >
+              All
+            </button>
+            {['Technology', 'Gaming', 'Entertainment', 'Music', 'Comedy', 'Education', 'Cooking'].map(category => (
+              <button
+                key={category}
+                onClick={() => setActiveTab(category)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  activeTab === category.toLowerCase() ? 'bg-pink-600' : 'bg-gray-800 hover:bg-gray-700'
+                }`}
+              >
+                {category}
+              </button>
             ))}
           </div>
-        )}
+
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
+              <p className="mt-4 text-gray-400">Loading your tokens...</p>
+            </div>
+          ) : tokens.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400">No tokens found. Start trading to see your tokens here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {filteredTokens.map((token) => (
+                <motion.div
+                  key={token.id}
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6"
+                >
+                  <div className="flex items-center space-x-4 mb-6">
+                    <img
+                      src={token.thumbnail}
+                      alt={token.name}
+                      className="w-16 h-16 rounded-full border-2 border-pink-500"
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-semibold">{token.name}</h3>
+                      <p className="text-gray-400">{token.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-semibold">${token.price}</p>
+                      <p className={`${
+                        parseFloat(token.change24h) >= 0 ? 'text-green-500' : 'text-red-500'
+                      }`}>
+                        {parseFloat(token.change24h) >= 0 ? '+' : ''}{token.change24h}%
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <p className="text-gray-400">Market Cap</p>
+                      <p className="text-xl font-semibold">${formatNumber(token.marketCap)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Liquidity</p>
+                      <p className="text-xl font-semibold">${formatNumber(token.liquidity)}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4 mb-6 text-sm">
+                    <div className="flex items-center">
+                      <UserGroupIcon className="w-4 h-4 mr-2 text-gray-400" />
+                      <span>{formatNumber(token.subscribers)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <VideoCameraIcon className="w-4 h-4 mr-2 text-gray-400" />
+                      <span>{formatNumber(token.videos)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <EyeIcon className="w-4 h-4 mr-2 text-gray-400" />
+                      <span>{formatNumber(token.views)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CurrencyDollarIcon className="w-4 h-4 mr-2 text-gray-400" />
+                      <span>${formatNumber(token.volume24h)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-4">
+                    <Link
+                      to={`/token/${token.symbol}`}
+                      className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-center rounded-lg transition-colors"
+                    >
+                      View Details
+                    </Link>
+                    <Link
+                      to="/trade"
+                      className="flex-1 py-2 bg-pink-600 hover:bg-pink-700 text-center rounded-lg transition-colors"
+                    >
+                      Trade
+                    </Link>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
