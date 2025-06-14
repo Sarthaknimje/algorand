@@ -1,8 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowDownIcon } from '@heroicons/react/24/outline';
+import { useWallet } from '../context/WalletContext';
+import { QRCodeSVG } from 'qrcode.react';
 
 const Hero = ({ scrollToSection }) => {
+  const { isConnectedToPeraWallet, address, connectWallet, disconnectWallet } = useWallet();
+  const [showQR, setShowQR] = useState(false);
+
+  const handleConnectWallet = () => {
+    setShowQR(true);
+    connectWallet();
+  };
+
+  const handleDisconnectWallet = () => {
+    setShowQR(false);
+    disconnectWallet();
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -52,6 +67,13 @@ const Hero = ({ scrollToSection }) => {
     { name: "Tech Reviews", subscribers: "2.5M", image: "https://i.pravatar.cc/150?img=1" },
     { name: "Gaming", subscribers: "1.8M", image: "https://i.pravatar.cc/150?img=2" },
     { name: "Cooking", subscribers: "3.2M", image: "https://i.pravatar.cc/150?img=3" },
+  ];
+
+  const stats = [
+    { label: "Active Channels", value: "500+", icon: "📺" },
+    { label: "Total Volume", value: "1.2M ALGO", icon: "💰" },
+    { label: "Active Users", value: "10K+", icon: "👥" },
+    { label: "Avg. ROI", value: "32%", icon: "📈" },
   ];
 
   return (
@@ -141,13 +163,24 @@ const Hero = ({ scrollToSection }) => {
           variants={itemVariants}
           className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
         >
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(99,102,241,0.4)" }}
-            whileTap={{ scale: 0.95 }}
-            className="px-8 py-3 rounded-lg bg-gradient-to-r from-primary via-secondary to-accent hover:from-accent hover:to-primary text-white font-medium transition-all duration-300 shadow-glow"
-          >
-            Get Started
-          </motion.button>
+          {isConnectedToPeraWallet ? (
+            <motion.a
+              href="#mint"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-8 py-3 rounded-lg bg-gradient-to-r from-primary via-secondary to-accent text-white font-medium transition-all duration-300"
+            >
+              Launch Your Token
+            </motion.a>
+          ) : (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-8 py-3 rounded-lg bg-gradient-to-r from-primary via-secondary to-accent text-white font-medium transition-all duration-300"
+            >
+              Connect Wallet to Launch
+            </motion.button>
+          )}
           <motion.button
             whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(236,72,153,0.4)" }}
             whileTap={{ scale: 0.95 }}
@@ -216,12 +249,7 @@ const Hero = ({ scrollToSection }) => {
           variants={containerVariants}
           className="mt-20 grid grid-cols-2 sm:grid-cols-4 gap-8 max-w-4xl mx-auto"
         >
-          {[
-            { label: "Active Channels", value: "500+", icon: "📺" },
-            { label: "Total Volume", value: "1.2M ALGO", icon: "💰" },
-            { label: "Active Users", value: "10K+", icon: "👥" },
-            { label: "Avg. ROI", value: "32%", icon: "📈" },
-          ].map((stat, index) => (
+          {stats.map((stat, index) => (
             <motion.div
               key={index}
               variants={itemVariants}
@@ -233,6 +261,37 @@ const Hero = ({ scrollToSection }) => {
                 {stat.value}
               </div>
               <div className="text-sm text-gray-400">{stat.label}</div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8"
+        >
+          {[
+            {
+              title: "Create Token",
+              description: "Launch your own token in 60 seconds with customizable supply and initial price"
+            },
+            {
+              title: "Grow Value",
+              description: "Token price automatically adjusts based on YouTube metrics and trading activity"
+            },
+            {
+              title: "Earn Revenue",
+              description: "Earn from trading fees and sell your own tokens at any time"
+            }
+          ].map((feature, index) => (
+            <motion.div
+              key={index}
+              whileHover={{ y: -5, scale: 1.02 }}
+              className="p-6 rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10"
+            >
+              <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
+              <p className="text-gray-300">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -254,6 +313,22 @@ const Hero = ({ scrollToSection }) => {
           <ArrowDownIcon className="h-6 w-6 animate-bounce" />
         </motion.button>
       </motion.div>
+
+      {showQR && !isConnectedToPeraWallet && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+        >
+          <div className="bg-dark p-8 rounded-2xl border border-white/10">
+            <h3 className="text-xl font-bold text-white mb-4">Scan QR Code</h3>
+            <div className="bg-white p-4 rounded-lg">
+              <QRCodeSVG value="pera://" size={200} />
+            </div>
+            <p className="text-gray-400 mt-4 text-center">Scan with Pera Wallet to connect</p>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

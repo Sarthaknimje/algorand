@@ -1,141 +1,134 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { SunIcon, MoonIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useWallet } from '../context/WalletContext';
+import ConnectWallet from './ConnectWallet';
 
-const Navbar = ({ darkMode, setDarkMode }) => {
+const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isConnectedToPeraWallet } = useWallet();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navItems = [
-    { label: 'Features', href: '#features' },
-    { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Channels', href: '#channels' },
-    { label: 'FAQ', href: '#faq' },
-  ];
+  const handleNavigation = (path) => {
+    setIsMobileMenuOpen(false);
+    navigate(path);
+  };
 
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={`fixed w-full z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/80 dark:bg-dark/80 backdrop-blur-lg shadow-lg'
-          : 'bg-transparent'
-      }`}
-    >
+    <nav className={`fixed w-full z-50 transition-all duration-300 ${
+      isScrolled ? 'bg-dark/80 backdrop-blur-lg' : 'bg-transparent'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center"
-          >
-            <motion.span
-              whileHover={{ scale: 1.05 }}
-              className="text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent animate-gradient"
-            >
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               EngageCoin
-            </motion.span>
-          </motion.div>
+            </span>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navItems.map((item, index) => (
-              <motion.a
-                key={item.label}
-                href={item.href}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                whileHover={{ y: -2 }}
-                className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
-              >
-                {item.label}
-              </motion.a>
-            ))}
+            <Link to="/" className="text-gray-300 hover:text-white transition-colors">
+              Home
+            </Link>
+            {isConnectedToPeraWallet && (
+              <>
+                <button
+                  onClick={() => handleNavigation('/launch-token')}
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Launch Token
+                </button>
+                <button
+                  onClick={() => handleNavigation('/my-tokens')}
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  My Tokens
+                </button>
+              </>
+            )}
+            <ConnectWallet />
           </div>
 
-          <div className="flex items-center space-x-4">
-            <motion.button
-              whileHover={{ scale: 1.1, rotate: 15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg bg-white/10 dark:bg-dark-lighter hover:bg-white/20 dark:hover:bg-gray-700 transition-colors"
-            >
-              {darkMode ? (
-                <SunIcon className="h-5 w-5 text-yellow-500" />
-              ) : (
-                <MoonIcon className="h-5 w-5 text-gray-600" />
-              )}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="hidden md:block px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-dark font-medium transition-all duration-300 shadow-lg hover:shadow-primary/20"
-            >
-              Connect Wallet
-            </motion.button>
-
-            {/* Mobile menu button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg bg-white/10 dark:bg-dark-lighter hover:bg-white/20 dark:hover:bg-gray-700 transition-colors"
+              className="text-gray-300 hover:text-white focus:outline-none"
             >
-              {isMobileMenuOpen ? (
-                <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
-              ) : (
-                <Bars3Icon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
-              )}
-            </motion.button>
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                {isMobileMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="md:hidden bg-white/95 dark:bg-dark/95 backdrop-blur-lg"
+      {/* Mobile Menu */}
+      <motion.div
+        initial={false}
+        animate={{ height: isMobileMenuOpen ? 'auto' : 0 }}
+        className="md:hidden overflow-hidden bg-dark/95 backdrop-blur-lg"
+      >
+        <div className="px-4 pt-2 pb-3 space-y-1">
+          <button
+            onClick={() => handleNavigation('/')}
+            className="block w-full text-left px-3 py-2 text-gray-300 hover:text-white transition-colors"
           >
-            <div className="px-4 py-4 space-y-4">
-              {navItems.map((item) => (
-                <motion.a
-                  key={item.label}
-                  href={item.href}
-                  whileHover={{ x: 10 }}
-                  className="block text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </motion.a>
-              ))}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-dark font-medium transition-all duration-300"
+            Home
+          </button>
+          {isConnectedToPeraWallet && (
+            <>
+              <button
+                onClick={() => handleNavigation('/launch-token')}
+                className="block w-full text-left px-3 py-2 text-gray-300 hover:text-white transition-colors"
               >
-                Connect Wallet
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.nav>
+                Launch Token
+              </button>
+              <button
+                onClick={() => handleNavigation('/my-tokens')}
+                className="block w-full text-left px-3 py-2 text-gray-300 hover:text-white transition-colors"
+              >
+                My Tokens
+              </button>
+            </>
+          )}
+          <div className="px-3 py-2">
+            <ConnectWallet />
+          </div>
+        </div>
+      </motion.div>
+    </nav>
   );
 };
 
